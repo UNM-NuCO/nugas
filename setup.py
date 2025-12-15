@@ -1,60 +1,60 @@
-import setuptools, sys, os
+import setuptools
+import sys
+import os
 
-# module info
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
-ext_par = {
-    'name' : 'nugas',
-    'version' : '1.1',
-    'description' : 'Python package that computes flavor oscillations in dense neutrino gases.',
-    'url' : 'https://github.com/NuCO-UNM/nugas',
-    'author' : 'Huaiyu Duan',
-    'author_email' : 'duan@unm.edu',
-    'license' : 'MIT',
-    'long_description' : long_description,
-    'long_description_content_type' : "text/markdown",
-    'classifiers' : [
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent"
-    ],
-    'package_dir' : {"": "src"},
-    'packages' : setuptools.find_packages(where="src"),
-    'python_requires' : ">=3.7",
-    'install_requires' : [ 'numpy', 'scipy' ],
-    'zip_safe' : False
-}
-    
+try:
+    import sysconfig
+    from pybind11.setup_helpers import Pybind11Extension, build_ext
 
-try: # try to build the c++ extensions
-    from pybind11.setup_helpers import Pybind11Extension, build_ext, intree_extensions
+    # List of C++ extension modules
+    ext_modules = [
+        Pybind11Extension(
+            "nugas.misc.pdz_c",
+            ["src/nugas/misc/pdz_c.cpp"],
+        ),
+        Pybind11Extension(
+            "nugas.f2e0d1a.eom_c",
+            ["src/nugas/f2e0d1a/eom_c.cpp"],
+        ),
+        Pybind11Extension(
+            "nugas.f2e0d1a.lax42",
+            ["src/nugas/f2e0d1a/lax42.cpp"],
+        ),
+    ]
 
-    # list of extensions
-    ext_modules = intree_extensions(
-        ["src/nugas/misc/pdz_c.cpp",
-        "src/nugas/f2e0d1a/eom_c.cpp", 
-        "src/nugas/f2e0d1a/lax42.cpp"]
-    )
-
-    # additional flags depending on the compiler
-    if sys.platform.startswith("darwin"): # MacOS, assuming clang
+    # Additional compiler flags depending on the platform/compiler
+    if sys.platform.startswith("darwin"):  # MacOS, assuming clang
         extra_compile_args = ['-Xpreprocessor', '-fopenmp']
         extra_link_args = []
-    elif 'icpc' in os.environ['CXX']:
+
+
+
+    elif 'CXX' in os.environ and 'icpc' in os.environ['CXX']:
         extra_compile_args = ['-xHost', '-qopenmp']
         extra_link_args = ['-qopenmp']
-    else: # assuming g++
+    else:  # assuming g++
         extra_compile_args = ['-fopenmp']
-        extra_link_args = ['-lgomp'] 
-    for m in ext_modules:
-        m._add_cflags(extra_compile_args)
-        m._add_ldflags(extra_link_args)
+        extra_link_args = ['-lgomp']
+
+    # Add conda include path if available
+    if "CONDA_PREFIX" in os.environ:
+        extra_compile_args.append(f'-I{os.environ["CONDA_PREFIX"]}/include')
+
+    # Add Python include path
+    extra_compile_args.append(f'-I{sysconfig.get_paths()["include"]}')
+
+    # Apply flags to all extensions
+    for ext in ext_modules:
+        ext.extra_compile_args = extra_compile_args
+        ext.extra_link_args = extra_link_args
 
     setuptools.setup(
         ext_modules=ext_modules,
         cmdclass={"build_ext": build_ext},
-        **ext_par
     )
-except:
-    setuptools.setup(**ext_par)
+
+except Exception as e:
+    # Fall back to pure Python installation if C++ compilation fails
     print("** FAILED TO BUILD THE C++ EXTENSIONS. INSTALLED THE PURE PYTHON PACKAGE INSTEAD. **", file=sys.stderr)
+    print(f"** Error: {e} **", file=sys.stderr)
+    setuptools.setup()

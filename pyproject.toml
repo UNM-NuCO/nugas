@@ -1,0 +1,35 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    "pybind11>=2.10.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nugas"
+version = "1.1"
+description = "Python package that computes flavor oscillations in dense neutrino gases."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Huaiyu Duan", email = "duan@unm.edu"}
+]
+requires-python = ">=3.7"
+dependencies = [
+    "numpy",
+    "scipy"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent"
+]
+
+[project.urls]
+Homepage = "https://github.com/UNM-NuCO/nugas"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
